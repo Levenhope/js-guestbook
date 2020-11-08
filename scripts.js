@@ -1,4 +1,12 @@
 (function () {
+    let modal = $('#modal');
+    let modalBody = $('.modal-body', modal);
+    let modalSaveButton = $('.save-modal-button', modal);
+
+    modal.on('hidden.bs.modal', function () {
+        modalBody.html('');
+    });
+
     function formatDate(dateSource) {
         dateSource = dateSource instanceof Date ? dateSource : new Date(dateSource);
         let dateObj = {};
@@ -9,23 +17,39 @@
         return dateObj;
     }
 
-    function createCommentTemplate(id, author, message, pubDate, editDate) {
+    function createCommentTemplate(record) {
+        let {id, author, message, pubDate, editDate} = record;
         pubDate = formatDate(pubDate);
         editDate = editDate ? formatDate(editDate) : null;
 
         return`<article class="card mb-2" id="${id}">
-            <div class="card-body">
-                <h3 class="cart-title">${author}</h3>
-                <p>${message}</p>
-            </div>
-            <div class="card-footer">
-                ${editDate ? `<small class="card-edit-date">Edit date: ${editDate.time} ${editDate.date}</small>` : ''}
-                <small>Pub date: ${pubDate.time} ${pubDate.date}</small>
-                <button class="comment-button btn btn-secondary btn-sm">comments this</button>
-                <button class="edit-button btn btn-primary btn-sm">edit this</button>
-                <button class="delete-button btn btn-danger btn-sm">delete this</button>
-            </div>
-        </article>`;
+                    <div class="card-body">
+                        <h3 class="cart-title">${author}</h3>
+                        <p class="card-message">${message}</p>
+                    </div>
+                    <div class="card-footer">
+                        ${editDate ? `<small class="card-edit-date">Edit date: ${editDate.time} ${editDate.date}</small>` : ''}
+                        <small>Pub date: ${pubDate.time} ${pubDate.date}</small>
+                        <button class="comment-button btn btn-secondary btn-sm">comments this</button>
+                        <button class="edit-button btn btn-primary btn-sm">edit this</button>
+                        <button class="delete-button btn btn-danger btn-sm">delete this</button>
+                    </div>
+                </article>`;
+    }
+
+    function createSubCommentTemplate(subComment) {
+        let {author, message, pubDate} = subComment;
+        pubDate = formatDate(pubDate);
+
+        return `<article class="card">
+                    <div class="card-body">
+                        <h6>${author}</h6>
+                        <p>${message}</p>
+                    </div>
+                    <div class="card-footer">
+                        <small>Pub date: ${pubDate.time} ${pubDate.date}</small>
+                    </div>
+                </article>`;
     }
 
     function validateField(field, condition) {
@@ -76,14 +100,6 @@
                 let author = $('#name', form).val();
                 let message = $('#message', form).val();
                 let pubDate = new Date();
-                let newComment = createCommentTemplate(id, author, message, pubDate);
-
-                // id - уникальный id записи
-                // author {string} - имя автора записи
-                // message {string} - текст записи
-                // pubDate {Date} - дата создания записи
-                // editDate {Date} - дата редактирования записи
-                // comments {array} - массив комментариев к записи
                 let record = {
                     id,
                     author,
@@ -92,6 +108,7 @@
                     editDate: null,
                     comments: []
                 };
+                let newComment = createCommentTemplate(record);
 
                 DB.addRecords(record);
 
@@ -106,10 +123,19 @@
 
     function initCommentsList() {
         let records = DB.getAllRecords();
-
+        console.log(records);
         records.reverse().forEach(function (record) {
-            let newComment = createCommentTemplate(record.id, record.author, record.message, record.pubDate, record.editDate);
+            let newComment = createCommentTemplate(record);
             $('#comments-list').append(newComment);
+
+            if (record.comments.length > 0) {
+                let subCommentsList = $('<div>').addClass('sub-comments-list p-2');
+                $(`#${record.id}`).append(subCommentsList);
+
+                record.comments.forEach(function(subComment) {
+                    subCommentsList.append(createSubCommentTemplate(subComment));
+                });
+            }
         });
     }
 
@@ -123,6 +149,15 @@
         });
     }
 
+    function createFieldTemplate(fieldType, fieldName) {
+        return `<div class="form-group">
+                    <label for="name">${fieldName.split('-').join(' ')}</label>
+                    ${fieldType === 'textarea' ? 
+                    `<textarea name="${fieldName}" class="form-control" id="${fieldName}" cols="30" rows="2"></textarea>` :
+                    `<input type="text" class="form-control" id="${fieldName}">`}
+                </div>`;
+    }
+
     function initEditButtons() {
         $(document).on('click', '.edit-button', function() {
             let card = $(this).closest('.card');
@@ -130,30 +165,86 @@
             let record = DB.getAllRecords().filter(function(record) {
                 return record.id === id;
             })[0];
-            let editModal = $('#editModal');
-            let messageField = $('#message-edit', editModal);
+            let messageField = createFieldTemplate('textarea', 'edit-message');
+            modalBody.append(messageField);
 
-            messageField.val(record.message);
+            let messageInput = $('#edit-message');
+            messageInput.val(record.message);
 
-            $('#editModal').modal('show');
-
-            $('.save-edit-button').on('click', function() {
-                record.message = messageField.val();
+            function saveEditedComment() {
+                record.message = messageInput.val();
                 record.editDate = new Date();
                 let formattedEditDate = formatDate(record.editDate);
                 let editDatePlace = $('.card-edit-date', card);
 
-                $('.card-body p', card).text(record.message);
+                $('.card-message',).text(record.message);
                 if (!editDatePlace) {
                     $('.card-footer', card).prepend(`<small class="card-edit-date">Edit date: ${formattedEditDate.time} ${formattedEditDate.date}</small>`);
                 } else {
                     editDatePlace.text(`Edit date: ${formattedEditDate.time} ${formattedEditDate.date}`);
                 }
 
-                $('#editModal').modal('hide');
+                modalSaveButton.off('click', saveEditedComment);
+                modal.modal('hide');
+                modalBody.html('');
                 initAlert('comments update');
 
                 DB.updateRecord(record);
+            }
+
+            modal.modal('show');
+            modalSaveButton.on('click', saveEditedComment);
+            modal.on('hidden.bs.modal', function () {
+                modalSaveButton.off('click', saveEditedComment);
+            });
+        });
+    }
+
+    function initCommentAdding() {
+        $(document).on('click', '.comment-button', function() {
+            let card = $(this).closest('.card');
+            let id = card.attr('id');
+            let record = DB.getAllRecords().filter(function(record) {
+                return record.id === id;
+            })[0];
+            let commentForm = $('<form>');
+            let nameField = createFieldTemplate('input', 'comment-name');
+            let messageField = createFieldTemplate('textarea', 'comment-message');
+
+            commentForm.append(nameField);
+            commentForm.append(messageField);
+            modalBody.append(commentForm);
+
+            let nameInput = $('#comment-name');
+            let messageInput = $('#comment-message');
+
+            modal.modal('show');
+
+            function addSubComment() {
+                let subComment = {};
+                subComment.author = nameInput.val();
+                subComment.message = messageInput.val();
+                subComment.pubDate = new Date();
+                let subCommentsList = $('.sub-comments-list').length ? $('.sub-comments-list') : $('<div>').addClass('sub-comments-list p-2');
+
+                if (record.comments.length < 1) {
+                    card.append(subCommentsList);
+                }
+
+                subCommentsList.append(createSubCommentTemplate(subComment));
+
+                modalSaveButton.off('click', addSubComment);
+                modal.modal('hide');
+                modalBody.html('');
+                initAlert('comments update');
+
+                record.comments.push(subComment);
+                DB.updateRecord(record);
+            }
+
+            modalSaveButton.on('click', addSubComment);
+            modal.on('hidden.bs.modal', function () {
+                modalSaveButton.off('click', addSubComment);
             });
         });
     }
@@ -161,6 +252,7 @@
     initCommentsList();
     initDeleteButtons();
     initEditButtons();
+    initCommentAdding();
 
     initForm('#add-comments');
 
