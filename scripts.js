@@ -1,8 +1,17 @@
 (function () {
-    function createCommentTemplate(id, author, message, pubDate) {
-        let dateObj = pubDate instanceof Date ? pubDate : new Date(pubDate);
-        let time = dateObj.toLocaleString('ru-RU', {hour: '2-digit', minute: '2-digit'});
-        let date = dateObj.toLocaleString('ru-RU', {day: 'numeric', month: 'numeric', year: 'numeric'});
+    function formatDate(dateSource) {
+        dateSource = dateSource instanceof Date ? dateSource : new Date(dateSource);
+        let dateObj = {};
+
+        dateObj.time = dateSource.toLocaleString('ru-RU', {hour: '2-digit', minute: '2-digit'});
+        dateObj.date = dateSource.toLocaleString('ru-RU', {day: 'numeric', month: 'numeric', year: 'numeric'});
+
+        return dateObj;
+    }
+
+    function createCommentTemplate(id, author, message, pubDate, editDate) {
+        pubDate = formatDate(pubDate);
+        editDate = editDate ? formatDate(editDate) : null;
 
         return`<article class="card mb-2" id="${id}">
             <div class="card-body">
@@ -10,7 +19,8 @@
                 <p>${message}</p>
             </div>
             <div class="card-footer">
-                <small>Pub date: ${time} ${date}</small>
+                ${editDate ? `<small class="card-edit-date">Edit date: ${editDate.time} ${editDate.date}</small>` : ''}
+                <small>Pub date: ${pubDate.time} ${pubDate.date}</small>
                 <button class="comment-button btn btn-secondary btn-sm">comments this</button>
                 <button class="edit-button btn btn-primary btn-sm">edit this</button>
                 <button class="delete-button btn btn-danger btn-sm">delete this</button>
@@ -38,10 +48,10 @@
         return ($('.is-invalid', $(form)).length < 1);
     }
 
-    function initAlert() {
+    function initAlert(message) {
         let alertElement = $('<div>').addClass('alert alert-success alert-dismissible')
             .append($('<button type="button" class="close" data-dismiss="alert">').append("&times;"))
-            .append('thank for your comment');
+            .append(message);
 
         $('body').append(alertElement);
         alertElement.alert();
@@ -79,13 +89,13 @@
                     author,
                     message,
                     pubDate,
-                    editDate: pubDate,
+                    editDate: null,
                     comments: []
                 };
 
                 DB.addRecords(record);
 
-                initAlert();
+                initAlert('thank for your comment');
 
                 $('#comments-list').append(newComment);
 
@@ -98,7 +108,7 @@
         let records = DB.getAllRecords();
 
         records.reverse().forEach(function (record) {
-            let newComment = createCommentTemplate(record.id, record.author, record.message, record.pubDate);
+            let newComment = createCommentTemplate(record.id, record.author, record.message, record.pubDate, record.editDate);
             $('#comments-list').append(newComment);
         });
     }
@@ -109,11 +119,48 @@
 
             DB.deleteRecord(card.attr('id'));
             card.remove();
+            initAlert('comments delete');
+        });
+    }
+
+    function initEditButtons() {
+        $(document).on('click', '.edit-button', function() {
+            let card = $(this).closest('.card');
+            let id = card.attr('id');
+            let record = DB.getAllRecords().filter(function(record) {
+                return record.id === id;
+            })[0];
+            let editModal = $('#editModal');
+            let messageField = $('#message-edit', editModal);
+
+            messageField.val(record.message);
+
+            $('#editModal').modal('show');
+
+            $('.save-edit-button').on('click', function() {
+                record.message = messageField.val();
+                record.editDate = new Date();
+                let formattedEditDate = formatDate(record.editDate);
+                let editDatePlace = $('.card-edit-date', card);
+
+                $('.card-body p', card).text(record.message);
+                if (!editDatePlace) {
+                    $('.card-footer', card).prepend(`<small class="card-edit-date">Edit date: ${formattedEditDate.time} ${formattedEditDate.date}</small>`);
+                } else {
+                    editDatePlace.text(`Edit date: ${formattedEditDate.time} ${formattedEditDate.date}`);
+                }
+
+                $('#editModal').modal('hide');
+                initAlert('comments update');
+
+                DB.updateRecord(record);
+            });
         });
     }
 
     initCommentsList();
     initDeleteButtons();
+    initEditButtons();
 
     initForm('#add-comments');
 
