@@ -1,7 +1,14 @@
 (function () {
-    let modal = $('#modal');
-    let modalBody = $('.modal-body', modal);
-    let modalSaveButton = $('.save-modal-button', modal);
+    const modal = $('#modal');
+    const modalBody = $('.modal-body', modal);
+    const modalSaveButton = $('.save-modal-button', modal);
+    const commentsSliderSettings = {
+        arrows: false,
+        slidesToShow: 1,
+        slidesToScroll: 1,
+        autoplay: true,
+        autoplaySpeed: 5000,
+    };
 
     modal.on('hidden.bs.modal', function () {
         modalBody.html('');
@@ -123,7 +130,7 @@
 
     function initCommentsList() {
         let records = DB.getAllRecords();
-        console.log(records);
+
         records.reverse().forEach(function (record) {
             let newComment = createCommentTemplate(record);
             $('#comments-list').append(newComment);
@@ -135,6 +142,8 @@
                 record.comments.forEach(function(subComment) {
                     subCommentsList.append(createSubCommentTemplate(subComment));
                 });
+
+                subCommentsList.slick(commentsSliderSettings);
             }
         });
     }
@@ -225,13 +234,15 @@
                 subComment.author = nameInput.val();
                 subComment.message = messageInput.val();
                 subComment.pubDate = new Date();
-                let subCommentsList = $('.sub-comments-list').length ? $('.sub-comments-list') : $('<div>').addClass('sub-comments-list p-2');
+                let subCommentsList = $('.sub-comments-list', card).length ? $('.sub-comments-list', card) : $('<div>').addClass('sub-comments-list p-2');
 
                 if (record.comments.length < 1) {
                     card.append(subCommentsList);
+                    subCommentsList.append(createSubCommentTemplate(subComment));
+                    subCommentsList.slick(commentsSliderSettings);
+                } else {
+                    subCommentsList.slick('slickAdd', createSubCommentTemplate(subComment));
                 }
-
-                subCommentsList.append(createSubCommentTemplate(subComment));
 
                 modalSaveButton.off('click', addSubComment);
                 modal.modal('hide');
