@@ -7,13 +7,20 @@
     <title>Guest Book</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
           integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <style>
+        .alert {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+        }
+    </style>
 </head>
 <body>
-<div class="container pt-4">
+<div class="container py-4">
     <h1> Guest book</h1>
     <form action="#" id="search">
         <div class="input-group">
-            <input type="text" class="form-control" id="search-field" placeholder="Authot...">
+            <input type="text" class="form-control" id="search-field" placeholder="Author...">
             <input type="text" class="form-control" id="search-date-from" placeholder="01.02.2017">
 
             <input type="text" class="form-control" id="search-date-to" placeholder="01.02.2019">
@@ -26,7 +33,7 @@
         </div>
     </form>
     <section id="comments-list">
-        <article class="card">
+        <!--<article class="card">
             <div class="card-body">
                 <h3  class="cart-title">UserName</h3>
                 <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Animi consequatur error maiores quisquam vitae. Aliquid blanditiis, dolorum, eligendi magni nesciunt nulla provident quisquam rem, reprehenderit sapiente similique tempore veniam voluptatum.</p>
@@ -48,7 +55,7 @@
                     </div>
                 </article>
             </div>
-        </article>
+        </article>-->
     </section>
     <div class="card mt-2">
         <form action="#" id="add-comments">
@@ -71,6 +78,7 @@
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
         integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
         crossorigin="anonymous"></script>
+<script src="DB.js"></script>
 <script src="scripts.js"></script>
 </body>
 </html>
