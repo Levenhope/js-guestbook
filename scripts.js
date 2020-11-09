@@ -1,5 +1,6 @@
 (function () {
     const modal = $('#modal');
+    const modalTitle = $('.modal-title', modal);
     const modalBody = $('.modal-body', modal);
     const modalSaveButton = $('.save-modal-button', modal);
     const commentsSliderSettings = {
@@ -90,41 +91,10 @@
         window.setTimeout(function() { alertElement.alert("close") }, 5000);
     }
 
-    function initForm(selector) {
-        let form = $(selector);
-
+    function initForm(form) {
         form.on('focusout', function(e) {
             let field = e.target;
             if (field.tagName !== 'BUTTON') runChecks(field);
-
-        });
-
-        form.on('submit', function(e) {
-            e.preventDefault();
-
-            if (validateForm(form)) {
-                let id = Math.random().toString(36).substr(2, 9);
-                let author = $('#name', form).val();
-                let message = $('#message', form).val();
-                let pubDate = new Date();
-                let record = {
-                    id,
-                    author,
-                    message,
-                    pubDate,
-                    editDate: null,
-                    comments: []
-                };
-                let newComment = createCommentTemplate(record);
-
-                DB.addRecords(record);
-
-                initAlert('thank for your comment');
-
-                $('#comments-list').append(newComment);
-
-                $('.form-control', form).each(function(index, field) { $(field).val(''); });
-            }
         });
     }
 
@@ -174,19 +144,27 @@
             let record = DB.getAllRecords().filter(function(record) {
                 return record.id === id;
             })[0];
+            let editForm = $('<form>').attr('id', 'edit-form');
+            modalBody.append(editForm);
+
             let messageField = createFieldTemplate('textarea', 'edit-message');
-            modalBody.append(messageField);
+            editForm.append(messageField);
 
             let messageInput = $('#edit-message');
             messageInput.val(record.message);
 
+            modal.modal('show');
+            modalTitle.text('Edit comment');
+
             function saveEditedComment() {
+                if (!validateForm(editForm)) return false;
+
                 record.message = messageInput.val();
                 record.editDate = new Date();
                 let formattedEditDate = formatDate(record.editDate);
                 let editDatePlace = $('.card-edit-date', card);
 
-                $('.card-message',).text(record.message);
+                $('.card-message', card).text(record.message);
                 if (!editDatePlace) {
                     $('.card-footer', card).prepend(`<small class="card-edit-date">Edit date: ${formattedEditDate.time} ${formattedEditDate.date}</small>`);
                 } else {
@@ -196,12 +174,12 @@
                 modalSaveButton.off('click', saveEditedComment);
                 modal.modal('hide');
                 modalBody.html('');
+                modalTitle.text('');
                 initAlert('comments update');
 
                 DB.updateRecord(record);
             }
 
-            modal.modal('show');
             modalSaveButton.on('click', saveEditedComment);
             modal.on('hidden.bs.modal', function () {
                 modalSaveButton.off('click', saveEditedComment);
@@ -209,14 +187,14 @@
         });
     }
 
-    function initCommentAdding() {
+    function initSubCommentAdding() {
         $(document).on('click', '.comment-button', function() {
             let card = $(this).closest('.card');
             let id = card.attr('id');
             let record = DB.getAllRecords().filter(function(record) {
                 return record.id === id;
             })[0];
-            let commentForm = $('<form>');
+            let commentForm = $('<form>').attr('id', 'add-subcomment');
             let nameField = createFieldTemplate('input', 'comment-name');
             let messageField = createFieldTemplate('textarea', 'comment-message');
 
@@ -224,12 +202,18 @@
             commentForm.append(messageField);
             modalBody.append(commentForm);
 
+            console.log(commentForm);
+            initForm(commentForm);
+
             let nameInput = $('#comment-name');
             let messageInput = $('#comment-message');
 
+            modalTitle.text('Add comment');
             modal.modal('show');
 
             function addSubComment() {
+                if (!validateForm(commentForm)) return false;
+
                 let subComment = {};
                 subComment.author = nameInput.val();
                 subComment.message = messageInput.val();
@@ -247,6 +231,7 @@
                 modalSaveButton.off('click', addSubComment);
                 modal.modal('hide');
                 modalBody.html('');
+                modalTitle.text('');
                 initAlert('comments update');
 
                 record.comments.push(subComment);
@@ -260,13 +245,45 @@
         });
     }
 
+    function initCommentForm() {
+        const commentForm = $('#add-comments');
+        initForm(commentForm);
+
+        commentForm.on('submit', function (e) {
+            e.preventDefault();
+
+            if (!validateForm(commentForm)) return false;
+
+            let id = Math.random().toString(36).substr(2, 9);
+            let author = $('#name', commentForm).val();
+            let message = $('#message', commentForm).val();
+            let pubDate = new Date();
+            let record = {
+                id,
+                author,
+                message,
+                pubDate,
+                editDate: null,
+                comments: []
+            };
+            let newComment = createCommentTemplate(record);
+
+            DB.addRecords(record);
+
+            initAlert('thank for your comment');
+
+            $('#comments-list').append(newComment);
+
+            $('.form-control', commentForm).each(function(index, field) { $(field).val(''); });
+        });
+    }
+
     initCommentsList();
+    initCommentForm();
+
     initDeleteButtons();
     initEditButtons();
-    initCommentAdding();
+    initSubCommentAdding();
 
-    initForm('#add-comments');
 
 }());
-
-
