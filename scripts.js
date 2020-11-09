@@ -3,6 +3,7 @@
     const modalTitle = $('.modal-title', modal);
     const modalBody = $('.modal-body', modal);
     const modalSaveButton = $('.save-modal-button', modal);
+    const commentsListElement = $('#comments-list');
     const commentsSliderSettings = {
         arrows: false,
         slidesToShow: 1,
@@ -60,6 +61,15 @@
                 </article>`;
     }
 
+    function createFieldTemplate(fieldType, fieldName) {
+        return `<div class="form-group">
+                    <label for="name">${fieldName.split('-').join(' ')}</label>
+                    ${fieldType === 'textarea' ?
+            `<textarea name="${fieldName}" class="form-control" id="${fieldName}" cols="30" rows="2"></textarea>` :
+            `<input type="text" class="form-control" id="${fieldName}">`}
+                </div>`;
+    }
+
     function validateField(field, condition) {
         if (!condition) {
             $(field).addClass('is-invalid');
@@ -80,6 +90,13 @@
         return ($('.is-invalid', $(form)).length < 1);
     }
 
+    function initForm(form) {
+        form.on('focusout', function(e) {
+            let field = e.target;
+            if (field.tagName !== 'BUTTON') runChecks(field);
+        });
+    }
+
     function initAlert(message) {
         let alertElement = $('<div>').addClass('alert alert-success alert-dismissible')
             .append($('<button type="button" class="close" data-dismiss="alert">').append("&times;"))
@@ -91,19 +108,11 @@
         window.setTimeout(function() { alertElement.alert("close") }, 5000);
     }
 
-    function initForm(form) {
-        form.on('focusout', function(e) {
-            let field = e.target;
-            if (field.tagName !== 'BUTTON') runChecks(field);
-        });
-    }
-
-    function initCommentsList() {
-        let records = DB.getAllRecords();
-
+    function initCommentsList(records) {
+        commentsListElement.html('');
         records.reverse().forEach(function (record) {
             let newComment = createCommentTemplate(record);
-            $('#comments-list').append(newComment);
+            commentsListElement.append(newComment);
 
             if (record.comments.length > 0) {
                 let subCommentsList = $('<div>').addClass('sub-comments-list p-2');
@@ -118,6 +127,23 @@
         });
     }
 
+    function initSearch() {
+        let searchForm = $('#search');
+        let searchButton = $('.search-button', searchForm);
+
+        searchButton.on('click', function (e) {
+            e.preventDefault();
+
+            let nameToSearch = $('#search-field', searchForm).val();
+
+            let filteredRecords = DB.getAllRecords().filter(function(record) {
+                return record.author.includes(nameToSearch);
+            });
+
+            initCommentsList(filteredRecords);
+        });
+    }
+
     function initDeleteButtons() {
         $(document).on('click', '.delete-button', function() {
             let card = $(this).closest('.card');
@@ -126,15 +152,6 @@
             card.remove();
             initAlert('comments delete');
         });
-    }
-
-    function createFieldTemplate(fieldType, fieldName) {
-        return `<div class="form-group">
-                    <label for="name">${fieldName.split('-').join(' ')}</label>
-                    ${fieldType === 'textarea' ? 
-                    `<textarea name="${fieldName}" class="form-control" id="${fieldName}" cols="30" rows="2"></textarea>` :
-                    `<input type="text" class="form-control" id="${fieldName}">`}
-                </div>`;
     }
 
     function initEditButtons() {
@@ -274,16 +291,16 @@
 
             $('#comments-list').append(newComment);
 
-            $('.form-control', commentForm).each(function(index, field) { $(field).val(''); });
+            $('.form-control', commentForm).each(function(index, field) {
+                $(field).val('');
+            });
         });
     }
 
-    initCommentsList();
+    initCommentsList(DB.getAllRecords());
     initCommentForm();
-
+    initSearch();
     initDeleteButtons();
     initEditButtons();
     initSubCommentAdding();
-
-
 }());
