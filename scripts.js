@@ -130,14 +130,30 @@
     function initSearch() {
         let searchForm = $('#search');
         let searchButton = $('.search-button', searchForm);
+        let dateFromField = $('#search-date-from', searchForm);
+        let dateToField = $('#search-date-to', searchForm);
+
+        dateFromField.datepicker();
+        dateToField.datepicker();
 
         searchButton.on('click', function (e) {
             e.preventDefault();
 
             let nameToSearch = $('#search-field', searchForm).val();
+            let dateFrom = dateFromField.data('datepicker').selectedDates[0] || new Date(0);
+            let dateTo = dateToField.data('datepicker').selectedDates[0] || new Date();
+            let filteredRecords = DB.getAllRecords();
 
-            let filteredRecords = DB.getAllRecords().filter(function(record) {
-                return record.author.includes(nameToSearch);
+            dateTo.setHours(23,59,59,999);
+
+            if (nameToSearch) {
+                filteredRecords = filteredRecords.filter(function(record) {
+                    return record.author.includes(nameToSearch);
+                });
+            }
+
+            filteredRecords = filteredRecords.filter(function(record) {
+                return Date.parse(record.pubDate) >= dateFrom && Date.parse(record.pubDate) <= dateTo;
             });
 
             initCommentsList(filteredRecords);
