@@ -257,6 +257,7 @@
                     card.append(subCommentsList);
                     subCommentsList.append(createSubCommentTemplate(subComment));
                     subCommentsList.slick(commentsSliderSettings);
+                    subCommentsList.slick('slickPlay');
                 } else {
                     subCommentsList.slick('slickAdd', createSubCommentTemplate(subComment));
                 }
